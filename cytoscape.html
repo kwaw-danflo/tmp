@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cytoscape.js Process Explorer Diagram</title>
+    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+    <script src="https://unpkg.com/elkjs@0.9.0/lib/elk.bundled.js"></script>
+    <!-- <script src="https://unpkg.com/cytoscape-elk@0.5.1/cytoscape-elk.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/cytoscape-elk@2.2.0/cytoscape-elk.js"></script> -->
+     <script src="https://cdn.jsdelivr.net/npm/cytoscape-elk@2.3.0/dist/cytoscape-elk.min.js"></script>
+    <style>
+        body { font: 14px helvetica neue, helvetica, arial, sans-serif; margin: 0; padding: 0; }
+        #cy {
+            width: 100%;
+            height: 90vh;
+            display: block;
+            background-color: #f7f7f7;
+            border: 1px solid #ddd;
+        }
+
+        /* Tooltip Styles */
+        .tooltip {
+            display: none;
+            position: absolute;
+            background-color: #fefefe;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 300px;
+            font-size: 14px;
+            line-height: 1.4;
+            pointer-events: none;
+            animation: tooltipFadeIn 0.2s ease-out;
+        }
+
+        @keyframes tooltipFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .tooltip-header {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .tooltip-body {
+            color: #555;
+        }
+
+        .tooltip-item {
+            margin-bottom: 6px;
+        }
+
+        .tooltip-label {
+            font-weight: bold;
+            color: #777;
+        }
+
+        .tooltip-value {
+            color: #333;
+        }
+
+        .flow-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FF8C00;
+        }
+    </style>
+</head>
+<body>
+
+<div id="cy"></div>
+
+<!-- Tooltip -->
+<div id="flowTooltip" class="tooltip">
+    <div class="tooltip-header">Flow Metrics Details</div>
+    <div class="tooltip-body">
+        <div class="tooltip-item">
+            <span class="tooltip-label">Flow Value:</span>
+            <span class="tooltip-value flow-value" id="tooltipFlowValue">-</span>
+        </div>
+        <div class="tooltip-item">
+            <span class="tooltip-label">Source:</span>
+            <span class="tooltip-value" id="tooltipSourceActivity">-</span>
+        </div>
+        <div class="tooltip-item">
+            <span class="tooltip-label">Target:</span>
+            <span class="tooltip-value" id="tooltipTargetActivity">-</span>
+        </div>
+        <div class="tooltip-item">
+            <span class="tooltip-label">Edge ID:</span>
+            <span class="tooltip-value" id="tooltipEdgeId">-</span>
+        </div>
+    </div>
+</div>
+
+<script>
+cytoscape.use(cytoscapeElk); 
+document.addEventListener('DOMContentLoaded', function() {
+    
+    var cy = window.cy = cytoscape({
+        container: document.getElementById('cy'),
+
+        // Data Structure based on the Celonis process flow diagram
+        elements: {
+            nodes: [
+                // Start nodes (black circles)
+                { data: { id: 'start1', label: 'Start: Subtask Activity', type: 'start' } },
+                { data: { id: 'start2', label: 'Start: Task Activity', type: 'start' } },
+                { data: { id: 'start3', label: 'Start: Workflow Group Activity', type: 'start' } },
+                { data: { id: 'start4', label: 'Start: Workflow Activity', type: 'start' } },
+                
+                // Activity nodes (blue rectangles)
+                { data: { id: 'legal1', label: 'Legal - Create New | Please verify...', type: 'activity' } },
+                { data: { id: 'send1', label: 'Send Global Rank details to MAMS Track activity', type: 'activity' } },
+                { data: { id: 'req1', label: 'Start: Request Validation & Invite for Review', type: 'activity' } },
+                { data: { id: 'send2', label: 'Send Global Rank details to MAMS', type: 'activity' } },
+                
+                // End nodes (black circles)
+                { data: { id: 'end1', label: 'End: Subtask Activity', type: 'end' } },
+                { data: { id: 'end2', label: 'End: Task Activity', type: 'end' } },
+                { data: { id: 'doc1', label: 'Start: Document Collection', type: 'activity' } },
+                { data: { id: 'end3', label: 'End: Workflow Activity', type: 'end' } },
+                
+                // Additional workflow nodes
+                { data: { id: 'req2', label: 'Start: Req Validation/Approval', type: 'activity' } },
+                { data: { id: 'req3', label: 'End: Req Validation/Approval', type: 'activity' } },
+                { data: { id: 'end4', label: 'End: Workflow Group Activity', type: 'end' } }
+            ],
+            edges: [
+                // Connections with flow values from the diagram
+                { data: { id: 'e1', source: 'start1', target: 'legal1', label: '41' } },
+                { data: { id: 'e2', source: 'start2', target: 'send1', label: '618' } },
+                { data: { id: 'e3', source: 'start3', target: 'req1', label: '1.57k' } },
+                { data: { id: 'e4', source: 'start4', target: 'send2', label: '618' } },
+                
+                { data: { id: 'e5', source: 'legal1', target: 'end1', label: '576' } },
+                { data: { id: 'e6', source: 'send1', target: 'end2', label: '618' } },
+                { data: { id: 'e7', source: 'req1', target: 'doc1', label: '700' } },
+                { data: { id: 'e8', source: 'send2', target: 'end3', label: '618' } },
+                
+                { data: { id: 'e9', source: 'doc1', target: 'req3', label: '208' } },
+                { data: { id: 'e10', source: 'req2', target: 'req3', label: '134k' } },
+                { data: { id: 'e11', source: 'req3', target: 'end4', label: '161' } },
+                { data: { id: 'e13', source: 'req3', target: 'end4', label: '1261' } },
+                { data: { id: 'e12', source: 'req1', target: 'req2', label: '2098' } },
+                { data: { id: 'e18', source: 'req3', target: 'req1', label: '2098' } },
+            ]
+        },
+
+        // Hierarchical Layout
+        // layout: {
+        //     name: 'dagre',
+        //     rankDir: 'TB',
+        //     rankSep: 120,
+        //     nodeSep: 80,
+        //     fit: true,
+        //     padding: 30,
+        //     avoidOverlap: true
+        // },
+
+        layout: {
+            name: 'elk',
+            elk: {
+                algorithm: 'layered',
+                'elk.direction': 'DOWN',           // vertical layout: top → bottom
+                'spacing.nodeNodeBetweenLayers': 120,
+                'spacing.edgeNode': 40,
+                'spacing.nodeNode': 80,
+                edgeRouting: 'ORTHOGONAL',         // edges bend around nodes
+            },
+            nodeDimensionsIncludeLabels: true,
+            animate: true,
+            animationDuration: 500
+        },
+
+        // Stylesheet for custom node shapes and colors
+        style: [
+            // Default node styles
+            {
+                selector: 'node',
+                style: {
+                    'label': 'data(label)',
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'font-size': '10px',
+                    'color': '#333',
+                    'text-wrap': 'wrap',
+                    'text-max-width': '120px',
+                    'width': '120px',
+                    'height': '40px'
+                }
+            },
+            
+            // Start Node Type (Black circle)
+            {
+                selector: 'node[type="start"]',
+                style: {
+                    'shape': 'ellipse',
+                    'background-color': '#000000',
+                    'color': '#fff',
+                    'border-width': '0',
+                    'height': '40px',
+                    'width': '40px'
+                }
+            },
+            
+            // End Node Type (Black circle)
+            {
+                selector: 'node[type="end"]',
+                style: {
+                    'shape': 'ellipse',
+                    'background-color': '#000000', 
+                    'color': '#fff', 
+                    'border-width': '0',
+                    'height': '40px',
+                    'width': '40px'
+                }
+            },
+            
+            // Activity Node Type (Blue rounded rectangle)
+            {
+                selector: 'node[type="activity"]',
+                style: {
+                    'shape': 'round-rectangle',
+                    'background-color': '#90caf9', 
+                    'border-color': '#1565c0',
+                    'border-width': '1px',
+                    'color': '#000'
+                }
+            },
+
+            // Edge Styles
+            {
+                selector: 'edge',
+                style: {
+                    'label': 'data(label)',
+                    'curve-style': 'bezier',
+                    'target-arrow-shape': 'triangle',
+                    'width': 2,
+                    'line-color': '#585858',
+                    'target-arrow-color': '#585858',
+                    'text-background-opacity': 1,
+                    'text-background-color': '#ffffff',
+                    'text-background-padding': '3px',
+                    'font-size': '10px',
+                    'color': '#333',
+                    'text-events': 'yes',
+                    'line-style': 'solid',
+                    // 'line-dash-pattern': [6, 3],
+                    // 'line-dash-offset': 0
+                }
+            }
+        ]
+    });
+
+    // Variable to store animation intervals
+    let edgeAnimations = new Map();
+
+    // Function to start edge animation
+    function startEdgeAnimation(edge) {
+        // Change edge style to dashed and highlighted
+        edge.style({
+            'line-color': '#FF8C00',
+            'target-arrow-color': '#FF8C00',
+            'width': 3,
+            'line-style': 'dashed',
+            'line-dash-pattern': [8, 4],
+            'line-dash-offset': 0
+        });
+        
+        // Start animation for moving dashes in the direction of the edge
+        let offset = 0;
+        const dashLength = 12; // Total length of dash pattern (8 + 4)
+        
+        const interval = setInterval(() => {
+            // Move forward in the direction of the edge (negative offset moves forward)
+            offset -= 1;
+            if (offset < -dashLength) offset = 0;
+            
+            edge.style('line-dash-offset', offset);
+        }, 60);
+        
+        // Store the interval reference
+        edgeAnimations.set(edge.id(), interval);
+    }
+
+    // Function to stop edge animation
+    function stopEdgeAnimation(edge) {
+        // Clear the animation interval
+        const interval = edgeAnimations.get(edge.id());
+        if (interval) {
+            clearInterval(interval);
+            edgeAnimations.delete(edge.id());
+        }
+        
+        // Reset edge style
+        edge.style({
+            'line-color': '#585858',
+            'target-arrow-color': '#585858',
+            'width': 2,
+            'line-style': 'solid',
+            // 'line-dash-pattern': [6, 3],
+            // 'line-dash-offset': 0
+        });
+    }
+
+    // Node hover events - animate all connected edges AND add hover class
+    cy.on('mouseover', 'node', function(event) {
+        let node = event.target;
+        
+        // Add hover class for edge hover management
+        node.addClass('hover');
+        
+        // Get all edges connected to this node (both incoming and outgoing)
+        let connectedEdges = node.connectedEdges();
+        
+        // Start animation for all connected edges
+        connectedEdges.forEach(function(edge) {
+            startEdgeAnimation(edge);
+        });
+    });
+
+    cy.on('mouseout', 'node', function(event) {
+        let node = event.target;
+        
+        // Remove hover class
+        node.removeClass('hover');
+        
+        // Get all edges connected to this node
+        let connectedEdges = node.connectedEdges();
+        
+        // Stop animation for all connected edges
+        connectedEdges.forEach(function(edge) {
+            stopEdgeAnimation(edge);
+        });
+    });
+
+    // Edge hover events - animate single edge
+    cy.on('mouseover', 'edge', function(event) {
+        let edge = event.target;
+        
+        // Only animate if not already animated by node hover
+        if (!edgeAnimations.has(edge.id())) {
+            startEdgeAnimation(edge);
+        }
+    });
+
+    cy.on('mouseout', 'edge', function(event) {
+        let edge = event.target;
+        
+        // Only stop animation if it's from direct edge hover (not node hover)
+        // Check if the edge's connected nodes are not being hovered
+        let sourceNode = edge.source();
+        let targetNode = edge.target();
+        
+        // Use a small delay to check if we're moving to a connected node
+        setTimeout(() => {
+            if (!sourceNode.hasClass('hover') && !targetNode.hasClass('hover')) {
+                stopEdgeAnimation(edge);
+            }
+        }, 50);
+    });
+
+    // Tooltip functionality
+    const tooltip = document.getElementById('flowTooltip');
+    let tooltipTimeout;
+
+    // Function to show tooltip near edge label
+    function showFlowTooltip(edge, event) {
+        const flowLabel = edge.data('label');
+        const sourceLabel = edge.source().data('label');
+        const targetLabel = edge.target().data('label');
+        const edgeId = edge.data('id');
+
+        // Populate tooltip content
+        document.getElementById('tooltipFlowValue').textContent = flowLabel;
+        document.getElementById('tooltipSourceActivity').textContent = sourceLabel;
+        document.getElementById('tooltipTargetActivity').textContent = targetLabel;
+        document.getElementById('tooltipEdgeId').textContent = edgeId;
+
+        // Get the position of the edge label
+        const edgePosition = edge.renderedMidpoint();
+        const cyContainer = cy.container();
+        const cyRect = cyContainer.getBoundingClientRect();
+
+        // Position the tooltip near the edge label
+        const tooltipX = cyRect.left + edgePosition.x + 10; // Offset to the right
+        const tooltipY = cyRect.top + edgePosition.y - 10;  // Offset above
+
+        tooltip.style.left = tooltipX + 'px';
+        tooltip.style.top = tooltipY + 'px';
+        tooltip.style.display = 'block';
+
+        // Auto-hide after 3 seconds
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(() => {
+            tooltip.style.display = 'none';
+        }, 3000);
+    }
+
+    // Hide tooltip when clicking elsewhere
+    cy.on('tap', function(event) {
+        if (event.target === cy) {
+            tooltip.style.display = 'none';
+            clearTimeout(tooltipTimeout);
+        }
+    });
+
+    // Show tooltip when edge label is clicked
+    cy.on('tap', 'edge', function(event) {
+        let edge = event.target;
+        showFlowTooltip(edge, event);
+        console.log('Edge data:', edge.data());
+    });
+
+});
+</script>
+
+</body>
+</html>
