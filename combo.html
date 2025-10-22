@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plotly Combo Chart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <style>
+        #chart {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="chart">
+        <div id="plotly-chart"></div>
+    </div>
+
+    <script>
+        // Sample data classes
+        const classes = [
+            'Intro to Computer Science',
+            'Data Structures',
+            'Algorithms',
+            'Operating Systems',
+            'Databases',
+            'Computer Networks',
+            'Software Engineering',
+            'Machine Learning',
+            'Artificial Intelligence',
+            'Human–Computer Interaction',
+            'Discrete Mathematics',
+            'Linear Algebra',
+            'Calculus I',
+            'Calculus II',
+            'Statistics',
+            'Programming Languages'
+        ];
+
+        // Generate sample data
+        const numPaper = classes.map(() => Math.floor(Math.random() * 8000) + 500);
+        const avgEstimatedTimeToRead = classes.map(() => Math.random() * 1500 + 100);
+        const avgActualTimeToRead = classes.map(() => Math.random() * 800 + 50);
+
+        // Trace 1: Bar chart for # Number of papers
+        const barTrace = {
+            type: 'bar',
+            orientation: 'h',
+            y: classes,
+            x: numPaper,
+            name: '# Papers',
+            marker: {
+                color: 'rgba(158, 158, 158, 0.5)',
+            },
+            hovertemplate: '<b>%{y}</b><br># Papers: %{x}<extra></extra>',
+            yaxis: 'y',
+            xaxis: 'x'
+        };
+
+        // Trace 2: Scatter plot for Avg Estimated Time to Read
+        const scatterActiveAge = {
+            type: 'scatter',
+            mode: 'markers',
+            y: classes,
+            x: avgEstimatedTimeToRead,
+            name: 'Avg Estimated Time to Read',
+            marker: {
+                color: '#4472C4',
+                size: 10,
+                line: {
+                    color: '#4472C4',
+                    width: 2
+                }
+            },
+            hovertemplate: '<b>%{y}</b><br>Avg Estimated Time to Read: %{x:.1f} Days<extra></extra>',
+            yaxis: 'y',
+            xaxis: 'x2'
+        };
+
+        // Trace 3: Scatter plot for Avg Actual Time to Read
+        const scatterInternalTime = {
+            type: 'scatter',
+            mode: 'markers',
+            y: classes,
+            x: avgActualTimeToRead,
+            name: 'Avg Actual Time to Read',
+            marker: {
+                color: '#2C2C2C',
+                size: 8,
+                line: {
+                    color: '#2C2C2C',
+                    width: 1
+                }
+            },
+            hovertemplate: '<b>%{y}</b><br>Avg Actual Time to Read: %{x:.1f} Days<extra></extra>',
+            yaxis: 'y',
+            xaxis: 'x2'
+        };
+
+        const data = [barTrace, scatterActiveAge, scatterInternalTime];
+
+        const layout = {
+            title: {
+                text: 'Class List',
+                font: { size: 14 }
+            },
+            showlegend: true,
+            legend: {
+                orientation: 'h',
+                x: 0,
+                y: -0.15,
+                xanchor: 'left',
+                yanchor: 'top'
+            },
+            hovermode: 'closest',
+            height: 700,
+            margin: {
+                l: 250,
+                r: 100,
+                t: 50,
+                b: 100
+            },
+            // X-axis for bar chart (# Papers / Avg Actual Time)
+            xaxis: {
+                title: '# Papers, Avg Actual Time to Read',
+                side: 'bottom',
+                showgrid: true,
+                zeroline: false
+            },
+            // X-axis 2 for scatter plots (Days)
+            xaxis2: {
+                title: 'Avg Estimated Time to Read',
+                overlaying: 'x',
+                side: 'top',
+                showgrid: false,
+                zeroline: false,
+                ticksuffix: ' Days'
+            },
+            // Y-axis (shared)
+            yaxis: {
+                title: '',
+                automargin: true,
+                tickfont: { size: 10 }
+            },
+            paper_bgcolor: 'white',
+            plot_bgcolor: '#f9f9f9',
+            font: {
+                family: 'Arial, sans-serif',
+                size: 12
+            }
+        };
+
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['lasso2d', 'select2d']
+        };
+
+        Plotly.newPlot('plotly-chart', data, layout, config);
+    </script>
+</body>
+</html>
